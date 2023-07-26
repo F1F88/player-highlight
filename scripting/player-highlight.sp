@@ -8,11 +8,11 @@
 
 public Plugin myinfo =
 {
-	name		= "Player highlight",
-	author		= "F1F88",
-	description = "allows players to highlight",
-	version		= PLUGIN_VERSION,
-	url			= "https://github.com/F1F88/player-highlight"
+    name        = "Player highlight",
+    author      = "F1F88",
+    description = "allows players to highlight",
+    version     = PLUGIN_VERSION,
+    url         = "https://github.com/F1F88/player-highlight"
 };
 
 bool    g_plugin_late;
@@ -23,6 +23,9 @@ int     cv_ph_color_r
 
 float   cv_ph_timer_interval;
 
+int     g_old_glow_color[MAXPLAYERS + 1];
+float   g_old_glow_dist[MAXPLAYERS + 1];
+
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
     g_plugin_late = late;
@@ -32,19 +35,22 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public void OnPluginStart()
 {
     ConVar convar;
-    (convar = CreateConVar("sm_ph_color_r",         "10", "The red color for player")).AddChangeHook(OnConVarChange);
+    (convar = CreateConVar("sm_ph_color_r",             "10", "The red color for player")).AddChangeHook(OnConVarChange);
     cv_ph_color_r = convar.IntValue;
-    (convar = CreateConVar("sm_ph_color_g",         "224", "The green color for player")).AddChangeHook(OnConVarChange);
+    (convar = CreateConVar("sm_ph_color_g",             "224", "The green color for player")).AddChangeHook(OnConVarChange);
     cv_ph_color_g = convar.IntValue;
-    (convar = CreateConVar("sm_ph_color_b",         "247", "The blue color for player")).AddChangeHook(OnConVarChange);
+    (convar = CreateConVar("sm_ph_color_b",             "247", "The blue color for player")).AddChangeHook(OnConVarChange);
     cv_ph_color_b = convar.IntValue;
-    (convar = CreateConVar("sm_ph_timer_interval",  "0.0", "")).AddChangeHook(OnConVarChange);
+    (convar = CreateConVar("sm_ph_timer_interval",      "0.0", "")).AddChangeHook(OnConVarChange);
     cv_ph_timer_interval = convar.FloatValue;
 
-    CreateConVar("sm_player_highlight_version",     "1.0.0");
-    AutoExecConfig(true,                            "player-highlight");
+    CreateConVar("sm_player_highlight_version",         "1.0.0");
+    AutoExecConfig(true,                                "player-highlight");
 
-    HookEvent("player_spawn", On_player_spawn,      EventHookMode_Post);
+    HookEvent("nmrih_reset_map",    On_nmrih_reset_map, EventHookMode_PostNoCopy);  // Only nmrih
+    HookEvent("player_spawn",       On_player_spawn,    EventHookMode_Post);
+    HookEvent("player_death",       On_player_death,    EventHookMode_Post);
+    HookEvent("player_extracted",   On_player_extracted, EventHookMode_Post);       // Only nmrih ?
 
     if( g_plugin_late )
     {
@@ -82,14 +88,33 @@ public void OnMapStart()
 
 Action Timer_check_player_highlight(Handle timer, any data)
 {
+    UnhighlightAllPlayers();
     HighlightAllPlayers();
     return Plugin_Continue;
+}
+
+void On_nmrih_reset_map(Event event, const char[] name, bool dontBroadcast)
+{
+    UnhighlightAllPlayers();
+    HighlightAllPlayers();
 }
 
 void On_player_spawn(Event event, const char[] name, bool dontBroadcast)
 {
     int client = GetClientOfUserId( event.GetInt("userid") );
-    HighlightEntity(client);
+    RequestFrame(HighlightPlayer, GetClientUserId(client));
+}
+
+void On_player_death(Event event, char[] name, bool dontBroadcast)
+{
+    int client = GetClientOfUserId( event.GetInt("userid") );
+    RequestFrame(UnhighlightPlayer, GetClientUserId(client));
+}
+
+void On_player_extracted(Event event, const char[] name, bool dontBroadcast)
+{
+    int client = event.GetInt("player_id");
+    RequestFrame(UnhighlightPlayer, GetClientUserId(client));
 }
 
 
@@ -99,7 +124,7 @@ void HighlightAllPlayers()
     {
         if( IsClientInGame(client) && IsPlayerAlive(client) )
         {
-            HighlightEntity(client);
+            RequestFrame(HighlightPlayer, GetClientUserId(client));
         }
     }
 }
@@ -109,43 +134,47 @@ bool CouldEntityGlow(int entity)
     return IsValidEdict(entity) && HasEntProp(entity, Prop_Send, "m_bGlowing") && HasEntProp(entity, Prop_Data, "m_bIsGlowable") && HasEntProp(entity, Prop_Data, "m_clrGlowColor") && HasEntProp(entity, Prop_Data, "m_flGlowDistance");
 }
 
-void HighlightEntity(int entity)
+void HighlightPlayer(int user_id)
 {
+    int client = GetClientOfUserId(user_id);
     // Don't glow if we are already glowing
-    if( ! CouldEntityGlow(entity) || GetEntProp(entity, Prop_Send, "m_bGlowing") != 0 )
+    if( ! CouldEntityGlow(client) || GetEntProp(client, Prop_Send, "m_bGlowing") != 0 )
     {
+        LogMessage(" %d | %d | %d | %d ", user_id, client, CouldEntityGlow(client), GetEntProp(client, Prop_Send, "m_bGlowing"));
         return ;
     }
 
     char rgb[12];
     FormatEx(rgb, sizeof(rgb), "%d %d %d", cv_ph_color_r, cv_ph_color_g, cv_ph_color_b);
 
-    // int     oldGlowColor = GetEntProp(entity, Prop_Send, "m_clrGlowColor");
-    // float   oldGlowDist  = GetEntPropFloat(entity, Prop_Send, "m_flGlowDistance");
+    g_old_glow_color[client] = GetEntProp(client, Prop_Send, "m_clrGlowColor");
+    g_old_glow_dist[client]  = GetEntPropFloat(client, Prop_Send, "m_flGlowDistance");
 
-    // TODO: Why don't we use above dataprops for these?
-    DispatchKeyValue(entity, "glowable", "1");
-    DispatchKeyValue(entity, "glowdistance", "-1");
-    DispatchKeyValue(entity, "glowcolor", rgb);
-    AcceptEntityInput(entity, "EnableGlow", entity, entity);
-
-    // DataPack data;
-    // CreateDataTimer((float)(duration), Timer_UnhighlightEntity, data, TIMER_FLAG_O_MAPCHANGE);
-    // data.WriteCell(EntIndexToEntRef(entity));
-    // data.WriteCell(oldGlowColor);
-    // data.WriteFloat(oldGlowDist);
+    DispatchKeyValue(client, "glowable", "1");
+    DispatchKeyValue(client, "glowdistance", "-1");
+    DispatchKeyValue(client, "glowcolor", rgb);
+    AcceptEntityInput(client, "EnableGlow", client, client);
 }
 
-stock void UnhighlightEntity(int entity_ref, int oldGlowColor, float oldGlowDist)
+void UnhighlightAllPlayers()
 {
-	int entity = EntRefToEntIndex(entity_ref);
-	if( entity != -1 )
-	{
-		SetEntProp(entity, Prop_Send, "m_clrGlowColor", oldGlowColor);
-		SetEntPropFloat(entity, Prop_Send, "m_flGlowDistance", oldGlowDist);
+    for(int client=1; client <= MaxClients; ++client)
+    {
+        if( IsClientInGame(client) && IsPlayerAlive(client) )
+        {
+            RequestFrame(UnhighlightPlayer, GetClientUserId(client));
+        }
+    }
+}
 
-		AcceptEntityInput(entity, "DisableGlow", entity, entity);
-	}
+void UnhighlightPlayer(int user_id)
+{
+    int client = GetClientOfUserId(user_id);
+    if( client != -1 && CouldEntityGlow(client) )
+    {
+        SetEntProp(client, Prop_Send, "m_clrGlowColor", g_old_glow_color[client]);
+        SetEntPropFloat(client, Prop_Send, "m_flGlowDistance", g_old_glow_dist[client]);
 
-	return ;
+        AcceptEntityInput(client, "DisableGlow", client, client);
+    }
 }
