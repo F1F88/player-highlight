@@ -140,7 +140,6 @@ void HighlightPlayer(int user_id)
     // Don't glow if we are already glowing
     if( ! CouldEntityGlow(client) || GetEntProp(client, Prop_Send, "m_bGlowing") != 0 )
     {
-        LogMessage(" %d | %d | %d | %d ", user_id, client, CouldEntityGlow(client), GetEntProp(client, Prop_Send, "m_bGlowing"));
         return ;
     }
 
