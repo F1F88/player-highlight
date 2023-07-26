@@ -2,7 +2,7 @@
 
 This plugin allows players to highlight
 
-![2023-07-26 171123](README_Img/2023-07-26 171123.png)
+![image](./img/2023-07-26%20171123.png)
 
 Inspiration from: https://github.com/dysphie/nmrih-ping-system
 

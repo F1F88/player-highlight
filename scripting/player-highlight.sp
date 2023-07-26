@@ -44,7 +44,7 @@ public void OnPluginStart()
     (convar = CreateConVar("sm_ph_timer_interval",      "0.0", "")).AddChangeHook(OnConVarChange);
     cv_ph_timer_interval = convar.FloatValue;
 
-    CreateConVar("sm_player_highlight_version",         "1.0.0");
+    CreateConVar("sm_player_highlight_version",         PLUGIN_VERSION);
     AutoExecConfig(true,                                "player-highlight");
 
     HookEvent("nmrih_reset_map",    On_nmrih_reset_map, EventHookMode_PostNoCopy);  // Only nmrih
