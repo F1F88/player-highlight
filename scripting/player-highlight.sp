@@ -22,6 +22,7 @@ int     cv_ph_color_r
         , cv_ph_color_b;
 
 float   cv_ph_timer_interval;
+Handle  g_ph_timer;
 
 int     g_old_glow_color[MAXPLAYERS + 1];
 float   g_old_glow_dist[MAXPLAYERS + 1];
@@ -35,22 +36,22 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 public void OnPluginStart()
 {
     ConVar convar;
-    (convar = CreateConVar("sm_ph_color_r",             "10", "The red color for player")).AddChangeHook(OnConVarChange);
+    (convar = CreateConVar("sm_ph_color_r",                 "10",   "The red color for player")).AddChangeHook(OnConVarChange);
     cv_ph_color_r = convar.IntValue;
-    (convar = CreateConVar("sm_ph_color_g",             "224", "The green color for player")).AddChangeHook(OnConVarChange);
+    (convar = CreateConVar("sm_ph_color_g",                 "224",  "The green color for player")).AddChangeHook(OnConVarChange);
     cv_ph_color_g = convar.IntValue;
-    (convar = CreateConVar("sm_ph_color_b",             "247", "The blue color for player")).AddChangeHook(OnConVarChange);
+    (convar = CreateConVar("sm_ph_color_b",                 "247",  "The blue color for player")).AddChangeHook(OnConVarChange);
     cv_ph_color_b = convar.IntValue;
-    (convar = CreateConVar("sm_ph_timer_interval",      "0.0", "")).AddChangeHook(OnConVarChange);
+    (convar = CreateConVar("sm_ph_timer_interval",          "0.0",  "Highlight players every so many times. 0.0=disabled (if highlight does not work sometimes, you can try setting it to above 0.0)")).AddChangeHook(OnConVarChange);
     cv_ph_timer_interval = convar.FloatValue;
 
-    CreateConVar("sm_player_highlight_version",         PLUGIN_VERSION);
-    AutoExecConfig(true,                                "player-highlight");
+    CreateConVar("sm_player_highlight_version",             PLUGIN_VERSION);
+    AutoExecConfig(true,                                    "player-highlight");
 
-    HookEvent("nmrih_reset_map",    On_nmrih_reset_map, EventHookMode_PostNoCopy);  // Only nmrih
-    HookEvent("player_spawn",       On_player_spawn,    EventHookMode_Post);
-    HookEvent("player_death",       On_player_death,    EventHookMode_Post);
-    HookEvent("player_extracted",   On_player_extracted, EventHookMode_Post);       // Only nmrih ?
+    HookEvent("nmrih_reset_map",    On_nmrih_reset_map,     EventHookMode_PostNoCopy);  // Only nmrih
+    HookEvent("player_spawn",       On_player_spawn,        EventHookMode_Post);
+    HookEvent("player_death",       On_player_death,        EventHookMode_Post);
+    HookEvent("player_extracted",   On_player_extracted,    EventHookMode_Post);        // Only nmrih ?
 
     if( g_plugin_late )
     {
@@ -75,6 +76,10 @@ void OnConVarChange(ConVar convar, char[] old_value, char[] new_value) {
     }
     else if( strcmp(convar_ame, "sm_ph_timer_interval") == 0 ) {
         cv_ph_timer_interval = convar.FloatValue;
+        if( g_ph_timer != INVALID_HANDLE ) {
+            delete g_ph_timer;
+        }
+        g_ph_timer = CreateTimer(cv_ph_timer_interval, Timer_check_player_highlight, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
     }
 }
 
@@ -82,7 +87,10 @@ public void OnMapStart()
 {
     if( cv_ph_timer_interval != 0.0 )
     {
-        CreateTimer(cv_ph_timer_interval, Timer_check_player_highlight, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+        if( g_ph_timer == INVALID_HANDLE)
+        {
+            g_ph_timer = CreateTimer(cv_ph_timer_interval, Timer_check_player_highlight, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
+        }
     }
 }
 
