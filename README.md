@@ -1,5 +1,7 @@
 # Player Highlight
 
+**Document :**  [English](./README.md) | [中文](./README_CHI.md)
+
 This plugin allows players to highlight
 
 ![image](./img/2023-07-26%20171123.png)
@@ -19,4 +21,4 @@ note: I have only tested usability on nmrih and am not sure if other games are a
 ## Installation
 - Grab the latest ZIP from releases
 - Extract the contents into `addons/sourcemod`
-- Load the plugin: `sm plugins load player-highlight`
+- Load the plugin `sm plugins load player-highlight`
