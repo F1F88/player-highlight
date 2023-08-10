@@ -130,7 +130,7 @@ void HighlightAllPlayers()
 {
     for(int client=1; client <= MaxClients; ++client)
     {
-        if( IsClientInGame(client) && IsPlayerAlive(client) )
+        if( IsClientInGame(client) )
         {
             RequestFrame(HighlightPlayer, GetClientUserId(client));
         }
@@ -146,7 +146,7 @@ void HighlightPlayer(int user_id)
 {
     int client = GetClientOfUserId(user_id);
     // Don't glow if we are already glowing
-    if( ! CouldEntityGlow(client) || GetEntProp(client, Prop_Send, "m_bGlowing") != 0 )
+    if( ! IsPlayerAlive(client) || ! CouldEntityGlow(client) || GetEntProp(client, Prop_Send, "m_bGlowing") != 0 )
     {
         return ;
     }
@@ -167,7 +167,7 @@ void UnhighlightAllPlayers()
 {
     for(int client=1; client <= MaxClients; ++client)
     {
-        if( IsClientInGame(client) && IsPlayerAlive(client) )
+        if( IsClientInGame(client) )
         {
             RequestFrame(UnhighlightPlayer, GetClientUserId(client));
         }
