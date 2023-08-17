@@ -59,24 +59,33 @@ public void OnPluginStart()
     }
 }
 
-void OnConVarChange(ConVar convar, char[] old_value, char[] new_value) {
+void OnConVarChange(ConVar convar, char[] old_value, char[] new_value)
+{
     if( convar == INVALID_HANDLE )
+    {
         return ;
+    }
+
     char convar_ame[32];
     convar.GetName(convar_ame, sizeof(convar_ame));
 
-    if( strcmp(convar_ame, "sm_ph_color_r") == 0 ) {
+    if( strcmp(convar_ame, "sm_ph_color_r") == 0 )
+    {
         cv_ph_color_r = convar.IntValue;
     }
-    else if( strcmp(convar_ame, "sm_ph_color_g") == 0 ) {
+    else if( strcmp(convar_ame, "sm_ph_color_g") == 0 )
+    {
         cv_ph_color_g = convar.IntValue;
     }
-    else if( strcmp(convar_ame, "sm_ph_color_b") == 0 ) {
+    else if( strcmp(convar_ame, "sm_ph_color_b") == 0 )
+    {
         cv_ph_color_b = convar.IntValue;
     }
-    else if( strcmp(convar_ame, "sm_ph_timer_interval") == 0 ) {
+    else if( strcmp(convar_ame, "sm_ph_timer_interval") == 0 )
+    {
         cv_ph_timer_interval = convar.FloatValue;
-        if( g_ph_timer != INVALID_HANDLE ) {
+        if( g_ph_timer != INVALID_HANDLE )
+        {
             delete g_ph_timer;
         }
         g_ph_timer = CreateTimer(cv_ph_timer_interval, Timer_check_player_highlight, _, TIMER_REPEAT | TIMER_FLAG_NO_MAPCHANGE);
@@ -104,7 +113,7 @@ Action Timer_check_player_highlight(Handle timer, any data)
 void On_nmrih_reset_map(Event event, const char[] name, bool dontBroadcast)
 {
     UnhighlightAllPlayers();
-    HighlightAllPlayers();
+    RequestFrame(HighlightAllPlayers);
 }
 
 void On_player_spawn(Event event, const char[] name, bool dontBroadcast)
@@ -116,13 +125,13 @@ void On_player_spawn(Event event, const char[] name, bool dontBroadcast)
 void On_player_death(Event event, char[] name, bool dontBroadcast)
 {
     int client = GetClientOfUserId( event.GetInt("userid") );
-    RequestFrame(UnhighlightPlayer, GetClientUserId(client));
+    UnhighlightPlayer(client);
 }
 
 void On_player_extracted(Event event, const char[] name, bool dontBroadcast)
 {
     int client = event.GetInt("player_id");
-    RequestFrame(UnhighlightPlayer, GetClientUserId(client));
+    UnhighlightPlayer(client);
 }
 
 
@@ -132,7 +141,7 @@ void HighlightAllPlayers()
     {
         if( IsClientInGame(client) )
         {
-            RequestFrame(HighlightPlayer, GetClientUserId(client));
+            HighlightPlayer(GetClientUserId(client));
         }
     }
 }
@@ -146,7 +155,7 @@ void HighlightPlayer(int user_id)
 {
     int client = GetClientOfUserId(user_id);
     // Don't glow if we are already glowing
-    if( ! IsPlayerAlive(client) || ! CouldEntityGlow(client) || GetEntProp(client, Prop_Send, "m_bGlowing") != 0 )
+    if( client <= 0 || client > MaxClients || ! IsClientInGame(client) || ! IsPlayerAlive(client) || ! CouldEntityGlow(client) || GetEntProp(client, Prop_Send, "m_bGlowing") != 0 )
     {
         return ;
     }
@@ -169,15 +178,14 @@ void UnhighlightAllPlayers()
     {
         if( IsClientInGame(client) )
         {
-            RequestFrame(UnhighlightPlayer, GetClientUserId(client));
+            UnhighlightPlayer(client);
         }
     }
 }
 
-void UnhighlightPlayer(int user_id)
+void UnhighlightPlayer(int client)
 {
-    int client = GetClientOfUserId(user_id);
-    if( client != -1 && CouldEntityGlow(client) )
+    if( CouldEntityGlow(client) )
     {
         SetEntProp(client, Prop_Send, "m_clrGlowColor", g_old_glow_color[client]);
         SetEntPropFloat(client, Prop_Send, "m_flGlowDistance", g_old_glow_dist[client]);
