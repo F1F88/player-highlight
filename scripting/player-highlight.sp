@@ -1,10 +1,10 @@
-#pragma newdecls required
-#pragma semicolon 1
-
 #include <sourcemod>
 #include <sdktools>
 
-#define PLUGIN_VERSION	   "1.1.0"
+#pragma newdecls required
+#pragma semicolon 1
+
+#define PLUGIN_VERSION	   "1.1.1"
 #define PLUGIN_DESCRIPTION "allows players to highlight"
 
 public Plugin myinfo =
@@ -164,7 +164,7 @@ void Frame_HighlightEntity(int entRef)
         FormatEx(rgb, sizeof(rgb), "%d %d %d", cv_ph_color_r, cv_ph_color_g, cv_ph_color_b);
 
         DispatchKeyValue(entity, "glowable", "1");
-        // DispatchKeyValue(entity, "glowblip", "1");
+        DispatchKeyValue(entity, "glowblip", "1");
         DispatchKeyValue(entity, "glowdistance", "-1.0");
         DispatchKeyValue(entity, "glowcolor", rgb);
         AcceptEntityInput(entity, "EnableGlow", entity, entity);
@@ -198,7 +198,7 @@ void Frame_UnHighlightEntity(int entRef)
         SetEntDataFloat(entity, g_offset_m_flGlowDistance, 0.0, true);
 
         DispatchKeyValue(entity, "glowable", "1");
-        // DispatchKeyValue(entity, "glowblip", "0");
+        DispatchKeyValue(entity, "glowblip", "0");
         DispatchKeyValue(entity, "glowdistance", "0.0");
         DispatchKeyValue(entity, "glowcolor", "0");
         AcceptEntityInput(entity, "DisableGlow", entity, entity);
